@@ -1,3 +1,4 @@
+//Merkle tree with voting interface, and counts votes, errors:Merkle tree not getting built
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
