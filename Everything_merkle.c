@@ -3,11 +3,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include "IDauthenticator.h"
 #define maxinputLen 100
 #define maxinputleaves 100
 #define COUNT 10
 #define MAX_STRINGS 100
 #define MAX_LENGTH 100
+#define NUM_CANDIDATES 4
 
 struct Node
 {
@@ -187,7 +189,7 @@ void tostring(char str[], unsigned int num)
 
 unsigned int hash_function(unsigned int input, unsigned int prev_hash)
 {
-   
+
     int prevhashlength = numberlength(prev_hash);
     char prevhashstring[prevhashlength];
     int inputlength = numberlength(input);
@@ -228,7 +230,7 @@ void transferStrings(char *strings[maxinputleaves], char Data[maxinputleaves][ma
 }
 
 void processStrings(char *strings[], int count)
-{
+{   printf("HIII");
     printf("Processing %d strings:\n", count);
     for (int i = 0; i < count; i++)
     {
@@ -267,8 +269,8 @@ void processStrings(char *strings[], int count)
     // printf("leaves %d\n",leaves);
     for (int i = (totalnodes - leaves); i <= (totalnodes - 1); i++)
     {
-        FinalArray[i] = hash(Data[leafindex]); //THIS IS ME REMOVING HASHING CUZ WE'RE HASHING WITH TIME ANYWAYS
-       // FinalArray[i] = Data[leafindex];
+        FinalArray[i] = hash(Data[leafindex]); // THIS IS ME REMOVING HASHING CUZ WE'RE HASHING WITH TIME ANYWAYS
+        // FinalArray[i] = Data[leafindex];
         leafindex++;
     }
     for (int i = (totalnodes - leaves - 1); i >= 0; i--)
@@ -301,74 +303,206 @@ char *getCurrentTime()
     return ctime(&currentTime);
 }
 
+// Function to write vote counts to a CSV file
+void writeVoteCountsToCSV(const char *filename, int voteCounts[]) {
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        printf("Error: Unable to open the file for writing.\n");
+        return;
+    }
+
+    for (int i = 0; i < 4; i++) {
+        fprintf(file, "%d\n", voteCounts[i]);
+    }
+
+    fclose(file);
+}
+
+// Function to read vote counts from a CSV file
+void readVoteCountsFromCSV(const char *filename, int voteCounts[]) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        // If the file doesn't exist or is empty, initialize the vote counts to 0
+        for (int i = 0; i < 4; i++) {
+            voteCounts[i] = 0;
+        }
+        return;
+    }
+
+    for (int i = 0; i < 4; i++) {
+        fscanf(file, "%d", &voteCounts[i]);
+        
+    }
+
+    fclose(file);
+}
+
 int main()
 {
+    
+    const char *votefile = "VoteCounts.csv";
+    int voteCounts[4];
+
+    // Read vote counts from the CSV file
+    readVoteCountsFromCSV(votefile, voteCounts);
+    // for(int i=0;i<5;i++)
+    //     printf("%d\n",voteCounts[i]);
 
     char *strings[maxinputleaves] = {0}; // HERE YA'LL NEED TO ADD THE FILE READ PREVIOUS INPUTS OPTION, THIS IS INITIAL STRING
 
     int count = 0;
     char input[MAX_LENGTH];
-    char choice;
+    int choice;
     char *currentTime;
-    const char *filePath = "input.csv";
-    // char* stringArray[MAX_STRING_COUNT] = { NULL };
-    int stringCount = readCSVFile(filePath, strings);
-    if (stringCount <= 0)
-   {
-    printf("An error occurred while reading the file.\n");}
 
-    // Print the strings from the array
-    for (int i = 0; i < stringCount; i++)
+    //const char *filePath = "input.csv";
+    // // char* stringArray[MAX_STRING_COUNT] = { NULL };
+    // int stringCount = readCSVFile(filePath, strings);
+    // if (stringCount <= 0)
+    // {
+    //     printf("An error occurred while reading the file.\n");
+    // }
+
+    // // Print the strings from the array
+    // for (int i = 0; i < stringCount; i++)
+    // {
+    //     printf("String %d: %s\n", i + 1, strings[i]);
+    // }
+    // count = readCSVFile(filePath, strings);
+
+    while (1)
     {
-    printf("String %d: %s\n", i + 1, strings[i]);
-    }
-    count = readCSVFile(filePath, strings);
-    do
-    {
-        printf("Enter a string: "); // HERE U CAN ADD TRANSACTIONS
-        fgets(input, sizeof(input), stdin);
-        input[strcspn(input, "\n")] = '\0'; // Remove newline character
-       
+        FILE *myfile = NULL;
+        myfile = fopen("ValidIDs.csv", "r+");
 
-            unsigned int inputHash = hash(input);
-
-            unsigned int timeHash;
-
-            currentTime = getCurrentTime();
-            printf("Current time: %s", currentTime);
-
-            timeHash = hash(currentTime);
-
-            unsigned int combinedHash = hash_function(inputHash, timeHash);
-
-            char combinedHashString[65]; // Array to store the combined hash as a string
-            sprintf(combinedHashString, "%u", combinedHash);
-
-            strings[count] = malloc(sizeof(char) * (strlen(combinedHashString) + 1));
-            strcpy(strings[count], combinedHashString);
-            count++;
-
-            printf("Do you want to add another string? (y/n): ");
-            scanf(" %c", &choice);
-            getchar(); // Consume the newline character
+        if (myfile == NULL)
+        {
+            printf("Trouble parsing through IDs. \nRetry again in some time....\n");
+            exit(0); // or return 1
         }
-     while (choice == 'y' || choice == 'Y');
+
+        char input[80];
+        printf("Enter your voter ID: ");
+        scanf("%s", input);
+
+        int flag = IDauthenticator(myfile, input);
+        if (flag==1)
+        {
+            printf("Your ID is valid!\n");
+        }
+        else if(flag==-1)
+        {
+            printf("You have already voted!\n");
+            flag=0;
+        }
+        else
+        {
+            printf("Your ID is not valid...\n");
+        }
+
+        if (flag)
+        {
+            printf("\n1. Candidate 1\n2. Candidate 2\n3. Candidate 3\n4. Candidate 4\n");
+            printf("Enter your option: ");
+            int option;
+            scanf("%d", &option);
+            if (option == 1 || option == 2 || option == 3 || option == 4)
+            {   
+                // token system
+                const char *filename = "ValidIDs.csv";
+                modifycsv(filename, indexNumber - 1);
+
+                // adding votes system
+                if (option >= 1 && option <= 4) {
+                    voteCounts[option - 1]++;
+                    printf("Your vote has been recorded.\n");
+
+                
+                sprintf(input, "%d", option);
+                //fgets(input, sizeof(input), stdin);
+                input[strcspn(input, "\n")] = '\0'; // Remove newline character
+
+                unsigned int inputHash = hash(input);
+
+                unsigned int timeHash;
+
+                currentTime = getCurrentTime();
+                printf("Current time: %s", currentTime);
+
+                timeHash = hash(currentTime);
+
+                unsigned int combinedHash = hash_function(inputHash, timeHash);
+
+                char combinedHashString[65]; // Array to store the combined hash as a string
+                sprintf(combinedHashString, "%u", combinedHash);
+                
+                strings[count] = malloc(sizeof(char) * (strlen(combinedHashString) + 1));
+                strcpy(strings[count], combinedHashString);
+                count++;
+
+                // Write the updated vote counts to the CSV file
+                writeVoteCountsToCSV(votefile, voteCounts);
+
+                //const char *filename = "ValidIDs.csv";
+                modifycsv(filename, indexNumber - 1);
+
+            }
+            else
+            {
+                printf("Invalid option. Program terminating...\n");
+                break;
+            }
+
+            
+        }
+    }
+
+    // do
+    // {
+    //     printf("Enter a string: "); // HERE U CAN ADD TRANSACTIONS
+    //     fgets(input, sizeof(input), stdin);
+    //     input[strcspn(input, "\n")] = '\0'; // Remove newline character
+
+    //     unsigned int inputHash = hash(input);
+
+    //     unsigned int timeHash;
+
+    //     currentTime = getCurrentTime();
+    //     printf("Current time: %s", currentTime);
+
+    //     timeHash = hash(currentTime);
+
+    //     unsigned int combinedHash = hash_function(inputHash, timeHash);
+
+    //     char combinedHashString[65]; // Array to store the combined hash as a string
+    //     sprintf(combinedHashString, "%u", combinedHash);
+
+    //     strings[count] = malloc(sizeof(char) * (strlen(combinedHashString) + 1));
+    //     strcpy(strings[count], combinedHashString);
+    //     count++;
+
+    //     printf("Do you want to add another string? (y/n): ");
+    //     scanf(" %c", &choice);
+    //     getchar(); // Consume the newline character
+    // } while (choice == 'y' || choice == 'Y');
 
     processStrings(strings, count); // HERE IS WHERE THE ACTUAL MERKLE TREE GETS MADE
-    
-    const char *sourcePath = "CURRENTHASHES.csv";
-    const char *destinationPath = "OLDHASHES.csv";
 
-    int result = moveCSVContents(sourcePath, destinationPath);
-    if (result != 0)
-    {
-        printf("An error has occurred while moving the contents.\n");
-    }
+    // const char *sourcePath = "CURRENTHASHES.csv";
+    // const char *destinationPath = "OLDHASHES.csv";
+
+    // int result = moveCSVContents(sourcePath, destinationPath);
+    // if (result != 0)
+    // {
+    //     printf("An error occurred while moving the contents.\n");
+    // }
 
     // Free the memory allocated for each string
     for (int i = 0; i < count; i++)
     {
         free(strings[i]);
     }
-}
+return 0;
 
+}
+}    
