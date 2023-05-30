@@ -362,7 +362,7 @@ int main()
     int result = moveCSVContents(sourcePath, destinationPath);
     if (result != 0)
     {
-        printf("An error occurred while moving the contents.\n");
+        printf("An error has occurred while moving the contents.\n");
     }
 
     // Free the memory allocated for each string
